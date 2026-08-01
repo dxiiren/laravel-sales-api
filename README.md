@@ -1,42 +1,110 @@
 # Sales Management System
 
-Welcome to the "SalesManagementSystem" project! This repository is dedicated to building a robust system for managing sales data effectively. Below are the key components and features included in this project:
+A Laravel 10 sales-management demo API built around the Biztory invoicing dataset. It stores
+sales (with soft deletes), totals daily sales over a date range through both a REST endpoint
+and a Lighthouse GraphQL mutation, and fires a queued + broadcast `InvoiceCreated` event on
+every sale creation that is logged to `storage/logs/invoice.log`.
 
-**Sale Model with Soft Delete Trait:**
+> **New developer? Start with [`.docs/tldr.md`](.docs/tldr.md)** — every doc summarised on one
+> page. The full guide lives in [`.docs/`](.docs/README.md).
 
-Define a Sale model in the database schema with a soft delete trait, allowing for logical deletion of sales records without permanently removing them from the database.
+## Prerequisites
 
-**InvoiceCreated Event Broadcasting:**
+| Tool | Version | Installed by |
+| --- | --- | --- |
+| PowerShell + winget | Windows 10/11 stock | — (the only true prerequisites) |
+| Git | any recent | `setup.ps1` |
+| PHP | 8.3 (pinned — `composer.lock` rejects 8.4) | `setup.ps1` |
+| Composer | 2.x | `setup.ps1` |
+| Node.js | LTS (Vite asset build) | `setup.ps1` |
+| uv | latest | `setup.ps1` |
+| just | any recent | `setup.ps1` |
+| Claude Code CLI | latest | `setup.ps1` (optional, for AI-assisted dev) |
 
-When a new sale is created, broadcast an InvoiceCreated event and push it to a queue for further processing. This event facilitates real-time updates and notifications within the system.
+## Quick start
 
-**InvoiceCreated Event Logging:**
+```powershell
+# 1. One-time machine setup (idempotent — safe to re-run)
+pwsh ./setup.ps1
 
-Subscribe to the InvoiceCreated event and write a log entry into the invoice.log file for every occurrence. The log entry includes the date, reference number, and total amount of the invoice, providing a comprehensive audit trail for sales transactions.
+# 2. Close and reopen PowerShell so PATH updates land
 
-**GraphQL Endpoint Development:**
+# 3. One-time app bootstrap: composer + npm deps, sqlite .env, migrate, Vite build
+just bootstrap
 
-Develop a GraphQL endpoint that allows users to query the system for daily total sales within a specified date range. Users can also filter the results based on payment status and payee ID, providing flexibility in data retrieval and analysis.
+# 4. Start the dev server
+just start
+```
 
-**How to Use:**
+The app is now at **http://127.0.0.1:8111**. Stop it with `just stop`.
 
-1. Clone or download the repository to your local machine.
+## Commands
 
-2. Set up a local development environment with a compatible web server (e.g., Apache, Nginx) and a database server (e.g., MySQL, PostgreSQL).
+Run `just` with no arguments to list every recipe. The ones you'll use daily:
 
-3. Import the provided sample dataset(biztory.sql) into your database management system to initialize the database with initial data.
+| Command | What it does |
+| --- | --- |
+| `just bootstrap` | One-time app bootstrap: deps, sqlite `.env`, migrate, asset build |
+| `just start` | Serve on http://127.0.0.1:8111 in a background window |
+| `just serve` | Serve in the foreground (Ctrl+C to stop) |
+| `just stop` | Stop only THIS repo's `php.exe` processes |
+| `just migrate` | Run pending migrations |
+| `just fresh` | Drop everything and re-migrate + seed (irreversible locally) |
+| `just test --testsuite=Unit` | Run the PHPUnit suite (bare `just test` aborts — see below) |
+| `just lint` | Check code style with Laravel Pint (read-only) |
+| `just lint-fix` | Auto-fix code style with Laravel Pint |
+| `just claudex` | Launch Claude Code (Sonnet, all permissions) |
 
-4. Execute composer install to install dependencies.
+## Troubleshooting
 
-5. Test all functionalities by running the endpoints defined in api.php.
+### `composer install` fails: "nette/schema ... requires php 8.1 - 8.3"
 
-6. For additional documentation, please refer to the question.md file included in the repository.
+The lock file pins `nette/schema v1.3.0` and `nette/utils v4.0.4`, both of which cap PHP
+below 8.4. Use the PHP 8.3 that `setup.ps1` installs to
+`%LOCALAPPDATA%\Programs\php-8.3` — the justfile already targets it by absolute path. Do
+not run `composer update` to "fix" it.
 
+### `/api/*` or `/graphql` returns 500: "no such table: sales"
 
-**Notes:**
+Expected on the local sqlite database. The repo's migrations create framework tables only —
+the app's `sales`/`users` tables exist solely in the MySQL dump `biztory.sql`. The server,
+welcome page, GraphiQL IDE, and request validation all still work. To exercise the data
+endpoints you need a MySQL server with the dump imported and `.env` pointed at it. See
+[`.docs/06-troubleshooting/common-issues.md`](.docs/06-troubleshooting/common-issues.md).
 
-- This project is intended for educational and demonstration purposes and may require further customization and integration to suit specific business requirements.
+### `just test` aborts: `Test directory ".../tests/Feature" not found`
 
-- Ensure proper security measures are implemented, especially when handling sensitive sales data and processing user queries.
+`phpunit.xml` declares a Feature suite but the folder doesn't exist in git (empty
+directories aren't tracked). Run `just test --testsuite=Unit` instead. The four Unit tests
+then fail on the `sales` table gap above — that is the known local baseline, not a
+regression.
 
-Thank you for exploring the "SalesManagementSystem" project. If you have any questions or feedback, please don't hesitate to reach out.
+### `artisan migrate` fails: "could not find driver" (mysql)
+
+Your `.env` points at the biztory MySQL database (that is `.env.example`'s default) and the
+local PHP has no `pdo_mysql`. `just bootstrap` writes a fresh `.env` switched to sqlite; if
+you copied `.env` by hand, set `DB_CONNECTION=sqlite` and comment out the `DB_HOST` /
+`DB_PORT` / `DB_DATABASE` / `DB_USERNAME` / `DB_PASSWORD` lines.
+
+More in [`.docs/06-troubleshooting/common-issues.md`](.docs/06-troubleshooting/common-issues.md).
+
+## Project layout
+
+```
+Sales-Management-System/
+├── app/
+│   ├── Events/InvoiceCreated.php          # queued + broadcast on sale creation
+│   ├── Listeners/LogInvoiceCreated.php    # audit line into storage/logs/invoice.log
+│   ├── GraphQL/Mutations/DailyTotalSales.php  # GraphQL twin of CountDailySalesController
+│   ├── Http/Controllers/                  # StoreSale + CountDailySales (single-action)
+│   ├── Http/Requests/                     # StoreSaleRequest, CountDailySalesRequest
+│   └── Models/Sale.php                    # SoftDeletes; table `sales`
+├── graphql/                               # Lighthouse schema (schema/sale/user.graphql)
+├── routes/api.php                         # POST /api/sales, POST /api/daily-sale, GET /api/store-sale
+├── database/                              # framework migrations, SaleFactory, database.sqlite (local)
+├── biztory.sql                            # MySQL dump: real sales/users schema + sample data
+├── tests/Unit/                            # PHPUnit endpoint + GraphQL tests
+├── question.md                            # the original assignment brief this app implements
+├── justfile / setup.ps1                   # dev recipes / one-time machine bootstrap
+└── .docs/                                 # developer documentation (start at tldr.md)
+```
