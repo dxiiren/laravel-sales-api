@@ -8,7 +8,7 @@
 ## Tree
 
 ```
-Sales-Management-System/
+laravel-sales-api/
 ├── app/
 │   ├── Events/
 │   │   └── InvoiceCreated.php            # ShouldQueue + ShouldBroadcast (channel `invoice`); carries the Sale

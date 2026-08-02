@@ -137,7 +137,7 @@ scope: sales, api, graphql, events, models, db, config, test, build, docs, skill
 
 ## Evolution Log
 
-- Ported from the book-review pilot for Sales-Management-System (Laravel 10). Scope table
+- Ported from the book-review pilot for laravel-sales-api (Laravel 10). Scope table
   remapped to this repo's areas (sales API, Lighthouse GraphQL, InvoiceCreated events);
   hook-failure handling removed (no pre-commit hooks); build artifacts list adapted
   (`vendor/`, `public/build/`, sqlite db).

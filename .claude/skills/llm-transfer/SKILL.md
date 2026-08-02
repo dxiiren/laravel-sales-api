@@ -295,6 +295,6 @@ That's the shape of every handoff - scale each section up or down to fit the tas
 
 ## Evolution Log
 
-- Ported from the book-review pilot for Sales-Management-System (Laravel 10). Personas, stack
+- Ported from the book-review pilot for laravel-sales-api (Laravel 10). Personas, stack
   constraints, and the worked example adapted to this repo's sales API + GraphQL stack;
   Vercel references removed.

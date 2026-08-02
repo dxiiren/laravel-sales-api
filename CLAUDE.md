@@ -1,4 +1,4 @@
-# CLAUDE.md — Sales-Management-System
+# CLAUDE.md — laravel-sales-api
 
 > Human-facing developer docs live in [`.docs/`](./.docs/README.md) — start at
 > [`.docs/tldr.md`](./.docs/tldr.md). Keep them in sync when changing behavior they document.
@@ -11,7 +11,7 @@ payee filters), mirrors that aggregation as a Lighthouse GraphQL `DailyTotalSale
 and fires a queued + broadcast `InvoiceCreated` event on every sale creation that is logged to
 `storage/logs/invoice.log`.
 
-- **Repo:** GitHub — `github.com/dxiiren/Sales-Management-System`
+- **Repo:** GitHub — `github.com/dxiiren/laravel-sales-api`
 - **Runs locally only** — no CI/CD, no deployment target. `just start` serves on
   `http://127.0.0.1:8111`.
 
@@ -30,7 +30,7 @@ and fires a queued + broadcast `InvoiceCreated` event on every sale creation tha
 ### Project Structure
 
 ```
-Sales-Management-System/
+laravel-sales-api/
 ├── app/
 │   ├── Events/InvoiceCreated.php          # queued + broadcast on sale creation
 │   ├── Listeners/LogInvoiceCreated.php    # audit line into storage/logs/invoice.log

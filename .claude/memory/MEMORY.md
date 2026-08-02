@@ -1,4 +1,4 @@
-# Project Memory — Sales-Management-System
+# Project Memory — laravel-sales-api
 
 Index of stored memories. One line per memory: `- [Title](file.md) — hook (when to read it)`.
 Each memory lives in its own `*.md` fact file next to this index. See CLAUDE.md → Memory for

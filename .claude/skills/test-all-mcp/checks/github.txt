@@ -1,7 +1,7 @@
-Test the GitHub MCP server (repo / PR / issue on dxiiren/Sales-Management-System).
+Test the GitHub MCP server (repo / PR / issue on dxiiren/laravel-sales-api).
 
 Call `mcp__github__get_me` (returns the authenticated GitHub user).
-Optionally list repos or PRs for owner "dxiiren", repo "Sales-Management-System".
+Optionally list repos or PRs for owner "dxiiren", repo "laravel-sales-api".
 
 Reply with:
 1. Connected? — is the github MCP available? (yes/no)

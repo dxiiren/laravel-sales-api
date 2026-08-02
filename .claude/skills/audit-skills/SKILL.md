@@ -114,6 +114,6 @@ evolving it:
 
 ## Evolution Log
 
-- Ported from the book-review pilot for Sales-Management-System (Laravel 10). `audit.py` copied
+- Ported from the book-review pilot for laravel-sales-api (Laravel 10). `audit.py` copied
   verbatim (it is stack-agnostic); auto-fix guidance examples adapted to this repo's
   git-ignored config set (`.env`, `.mcp.json`, `settings.local.json`).

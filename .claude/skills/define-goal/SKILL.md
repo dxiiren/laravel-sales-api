@@ -150,6 +150,6 @@ Five pillars, distilled from a real overnight failure and its fix:
 
 ## Evolution Log
 
-- Ported from the book-review pilot for Sales-Management-System (Laravel 10). Examples
+- Ported from the book-review pilot for laravel-sales-api (Laravel 10). Examples
   adapted to this repo (`just bootstrap`/`just test`, the sqlite-vs-biztory.sql test gap as
   the worked goal); Vercel-specific deployment probes replaced with local-only reality.

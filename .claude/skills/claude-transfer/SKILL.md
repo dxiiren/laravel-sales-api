@@ -185,6 +185,6 @@ Grounded in primary sources, adversarially fact-checked (deep-research run):
 
 ## Evolution Log
 
-- Ported from the book-review pilot for Sales-Management-System (Laravel 10). Commands +
+- Ported from the book-review pilot for laravel-sales-api (Laravel 10). Commands +
   freshness checks adapted to this repo (`just start` on :8111, `just test`, migrate status);
   pointer examples now name the sales controllers/model.

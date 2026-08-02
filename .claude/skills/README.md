@@ -1,4 +1,4 @@
-# Skills Catalog — `Sales-Management-System`
+# Skills Catalog — `laravel-sales-api`
 
 Project development skills for this Laravel 10 sales-management API (REST + Lighthouse GraphQL, MySQL biztory.sql schema, sqlite local dev; GitHub, local-only). Each lives in its own directory with a `SKILL.md`. **Follow the relevant skill before writing code.** Run `/audit-skills` to verify every skill here is registered and that `CLAUDE.md` references only existing skills.
 

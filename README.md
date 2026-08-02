@@ -244,7 +244,7 @@ More in [`.docs/06-troubleshooting/common-issues.md`](.docs/06-troubleshooting/c
 ## Project layout
 
 ```
-Sales-Management-System/
+laravel-sales-api/
 ├── app/
 │   ├── Events/InvoiceCreated.php          # queued + broadcast on sale creation
 │   ├── Listeners/LogInvoiceCreated.php    # audit line into storage/logs/invoice.log

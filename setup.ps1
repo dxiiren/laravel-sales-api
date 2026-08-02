@@ -226,7 +226,7 @@ if (Test-Path $phpExe) {
         Copy-Item $phpIniTemplate $phpIni
         $override = @"
 
-; --- Sales-Management-System setup.ps1 overrides ---
+; --- laravel-sales-api setup.ps1 overrides ---
 ; Only extensions bundled in the official windows.php.net zip are listed here.
 extension_dir = "ext"
 extension=curl
