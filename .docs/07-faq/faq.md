@@ -62,8 +62,8 @@ broadcast. Real-time delivery would need Pusher credentials and a queue worker.
 
 **Q. Why do REST and GraphQL both implement daily totals?**
 By design — `CountDailySalesController` and the `DailyTotalSales` mutation are
-deliberate twins. Change both together. (Known quirk: the REST twin's truthy check drops
-`payment_status=0`; the GraphQL twin's `isset()` handles it.)
+deliberate twins. Change both together. (The one-time quirk — the REST twin's truthy
+check dropped `payment_status=0` — is fixed; both now use the `isset()` pattern.)
 
 **Q. GraphQL rejects my dates with "Trailing data"?**
 The `Date` scalar wants strict `Y-m-d` — `"2024-01-01"`, not `"2024-01-01 00:00:00"`.

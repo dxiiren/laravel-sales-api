@@ -94,10 +94,12 @@ Suites:
 - `tests/Unit/` — the four original endpoint + GraphQL tests (store sale, factory store,
   daily-sale count, GraphQL `DailyTotalSales`), all passing.
 - `tests/Feature/` — `POST /api/sales` happy path (200 + row persisted),
-  `POST /api/daily-sale` counting seeded sales, and a regression test for the
-  omitted-nullable-keys bug: leaving `payment_status`/`payee_id` out of the body used to
-  500 with `Undefined array key "payment_status"`; `CountDailySalesController` now
-  null-coalesces the optional filters, so an omitted key means "no filter".
+  `POST /api/daily-sale` counting seeded sales, and regression tests for two fixed
+  filter bugs: leaving `payment_status`/`payee_id` out of the body used to 500 with
+  `Undefined array key "payment_status"`, and the old truthy check silently dropped a
+  legitimate `payment_status=0` (unpaid) filter. `CountDailySalesController` now uses
+  the same `isset()` pattern as its GraphQL twin — an omitted or empty key means
+  "no filter", while `0` filters for unpaid sales.
 
 ## API examples
 
@@ -173,10 +175,12 @@ error envelope (`errors[]` + `"data": null`), not an HTTP 500:
 
 ### REST — `POST /api/daily-sale`
 
-Valid request body — the two filter keys are nullable and may be sent as `null` or
-omitted entirely. (Omitting them used to 500 with
-`Undefined array key "payment_status"`; the controller now null-coalesces the optional
-filters, covered by a regression test in `tests/Feature/CountDailySalesTest.php`.)
+Valid request body — the two filter keys are nullable and may be sent as `null`, sent
+empty, or omitted entirely; `payment_status: 0` is a real filter (unpaid sales only).
+(Omitting the keys used to 500 with `Undefined array key "payment_status"`, and the old
+truthy check dropped `payment_status=0`; the controller now uses the `isset()` pattern of
+its GraphQL twin, covered by regression tests in
+`tests/Feature/CountDailySalesTest.php`.)
 
 ```json
 {

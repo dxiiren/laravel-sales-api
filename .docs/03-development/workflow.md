@@ -43,9 +43,9 @@
 - **The REST/GraphQL twins must stay in sync** — `CountDailySalesController` and
   `app/GraphQL/Mutations/DailyTotalSales.php` intentionally mirror each other. Change the
   filter/aggregation logic in both or the endpoints diverge (`/pre-pr-review` checks this).
-  They already differ subtly: the REST controller's null-coalesced truthy check
-  (`$validatedData['payment_status'] ?? null`) still drops a legitimate
-  `payment_status=0` filter; the GraphQL resolver's `isset()` does not.
+  They are reconciled today — both use the `isset()` pattern (the REST twin's old
+  truthy check that dropped a legitimate `payment_status=0` filter is fixed and
+  regression-tested in `tests/Feature/CountDailySalesTest.php`) — keep them that way.
 - **Creating sales outside Eloquent skips the event chain** — `DB::insert()` or bulk
   `insert()` never fires `InvoiceCreated`, so no broadcast and no `invoice.log` line.
   Go through `Sale::create()` / instances.

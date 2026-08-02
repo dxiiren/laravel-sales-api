@@ -37,13 +37,13 @@ POST /api/daily-sale                         POST /graphql (mutation DailyTotalS
 ```
 
 The two implementations intentionally mirror each other. When changing filter or
-aggregation logic, change BOTH (the `pre-pr-review` skill checks this). Note the twins
-currently differ subtly: the REST controller uses a null-coalesced truthy check
-(`if ($validatedData['payment_status'] ?? null)` — the coalesce fixed the old
-omitted-key `Undefined array key` 500, regression-tested in
-`tests/Feature/CountDailySalesTest.php`) which still drops a legitimate
-`payment_status=0` filter, while the GraphQL resolver uses `isset()`. Treat the GraphQL
-behavior as the correct one if you ever reconcile them.
+aggregation logic, change BOTH (the `pre-pr-review` skill checks this). The twins are
+now reconciled: the REST controller uses the same `isset()` pattern as the GraphQL
+resolver (plus `!== ''` so an empty form value still means "no filter"), so a
+legitimate `payment_status=0` filter is honoured on both endpoints. Its history — the
+old truthy check dropped `payment_status=0`, and before that reading validated() keys
+directly 500'd on omitted keys — is regression-tested in
+`tests/Feature/CountDailySalesTest.php`.
 
 ## GraphQL layer
 

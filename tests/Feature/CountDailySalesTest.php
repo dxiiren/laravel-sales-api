@@ -55,4 +55,51 @@ class CountDailySalesTest extends TestCase
                 'total_sale' => 'RM 75.00',
             ]);
     }
+
+    /**
+     * payment_status 0 (unpaid) is a legitimate filter value, not "no filter".
+     * The REST controller used a truthy check, so requesting payment_status=0
+     * silently dropped the filter and counted every sale in range — while the
+     * GraphQL twin (DailyTotalSales, isset-based) filtered correctly. The two
+     * endpoints must agree: only the unpaid sale may be counted here.
+     */
+    public function testPaymentStatusZeroIsAppliedAsARealFilter(): void
+    {
+        Sale::factory()->create(['total' => 40.00, 'payment_status' => 0]); // unpaid
+        Sale::factory()->create(['total' => 60.00, 'payment_status' => 1]); // paid
+
+        $response = $this->postJson('/api/daily-sale', [
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addDay()->toDateString(),
+            'payment_status' => 0,
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'message' => 'Sale successfully counted',
+                'total_sale' => 'RM 40.00',
+            ]);
+    }
+
+    /**
+     * The empty-string form value must keep meaning "no filter" (the baseline
+     * happy-path test relies on it) even once 0 is honoured as a real value.
+     */
+    public function testEmptyStringPaymentStatusStillMeansNoFilter(): void
+    {
+        Sale::factory()->create(['total' => 40.00, 'payment_status' => 0]);
+        Sale::factory()->create(['total' => 60.00, 'payment_status' => 1]);
+
+        $response = $this->postJson('/api/daily-sale', [
+            'start_date' => now()->subDay()->toDateString(),
+            'end_date' => now()->addDay()->toDateString(),
+            'payment_status' => '',
+        ]);
+
+        $response->assertStatus(200)
+            ->assertJson([
+                'message' => 'Sale successfully counted',
+                'total_sale' => 'RM 100.00',
+            ]);
+    }
 }

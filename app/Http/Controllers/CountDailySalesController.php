@@ -21,14 +21,17 @@ class CountDailySalesController extends Controller
     {
         $query = Sale::whereBetween('created_at', [$validatedData['start_date'], $validatedData['end_date']]);
 
-        // Null-coalesce: validated() only contains keys that were present in the
-        // request, so omitting a nullable filter used to raise
-        // "Undefined array key" (500). Omitted now behaves like empty: no filter.
-        if ($validatedData['payment_status'] ?? null) {
+        // isset (matching the GraphQL twin, DailyTotalSales::buildQuery) rather
+        // than a truthy check: payment_status 0 (unpaid) is a legitimate filter
+        // value that a truthy check silently dropped. validated() only contains
+        // keys present in the request, so isset also covers the omitted-key case
+        // ("Undefined array key" 500) — and the extra !== '' keeps the empty
+        // form value meaning "no filter".
+        if (isset($validatedData['payment_status']) && $validatedData['payment_status'] !== '') {
             $query->where('payment_status', $validatedData['payment_status']);
         }
 
-        if ($validatedData['payee_id'] ?? null) {
+        if (isset($validatedData['payee_id']) && $validatedData['payee_id'] !== '') {
             $query->where('payee_id', $validatedData['payee_id']);
         }
 

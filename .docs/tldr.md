@@ -75,6 +75,6 @@ port-8111/stop behavior (two `php.exe` per serve).
 
 Quick answers: port 8111 (override with `$env:PORT`), no MySQL needed to boot, don't
 import the dump into sqlite, `just fresh` seeds nothing, where the invoice log goes, the
-queued/broadcast event runs inline locally, the REST/GraphQL twin rule (and the
+queued/broadcast event runs inline locally, the REST/GraphQL twin rule (and the fixed
 `payment_status=0` quirk), strict GraphQL dates, generated files to leave alone, and
 "is this deployed?" (no).
