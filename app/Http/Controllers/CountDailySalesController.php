@@ -38,9 +38,10 @@ class CountDailySalesController extends Controller
         return $query;
     }
 
-    private function calculateTotalSale(Builder $query): String
+    private function calculateTotalSale(Builder $query): string
     {
         $total = $query->sum('total');
-        return "RM " . number_format($total, 2, '.', ',');
+
+        return 'RM '.number_format($total, 2, '.', ',');
     }
 }
