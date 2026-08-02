@@ -62,8 +62,21 @@ broadcast. Real-time delivery would need Pusher credentials and a queue worker.
 
 **Q. Why do REST and GraphQL both implement daily totals?**
 By design — `CountDailySalesController` and the `DailyTotalSales` mutation are
-deliberate twins. Change both together. (The one-time quirk — the REST twin's truthy
-check dropped `payment_status=0` — is fixed; both now use the `isset()` pattern.)
+deliberate twins. Change both together; `tests/Feature/RestGraphqlParityTest.php`
+asserts they return the same money string for every filter shape. (Two past quirks are
+fixed: the REST twin's truthy check dropped `payment_status=0`, and the GraphQL twin
+rejected a null/empty `payee_id` that REST treats as "no filter" — its `@rules` now
+read `["nullable","exists:users,id"]`.)
+
+**Q. Do soft-deleted sales still count toward the totals?**
+No. `Sale` uses `SoftDeletes`, so its global scope hides trashed rows from both twins'
+`sum('total')`. `restore()` puts the amount back, `forceDelete()` removes the row —
+all pinned by `tests/Feature/SaleSoftDeleteTest.php`.
+
+**Q. I edited `graphql/sale.graphql` and nothing changed. Why?**
+The Lighthouse schema is cached to `bootstrap/cache/lighthouse-schema.php` for every
+`APP_ENV` except `local`. Delete that file (or keep `APP_ENV=local`). The test suite
+sidesteps it with `LIGHTHOUSE_SCHEMA_CACHE_ENABLE=false` in `phpunit.xml`.
 
 **Q. GraphQL rejects my dates with "Trailing data"?**
 The `Date` scalar wants strict `Y-m-d` — `"2024-01-01"`, not `"2024-01-01 00:00:00"`.
@@ -76,8 +89,12 @@ minimal test-only copies of the `sales`/`users` tables per test, cross-checked a
 `biztory.sql`. That is test scaffolding, not app schema — migrations stay
 framework-only, and the running app still needs MySQL for data endpoints.
 
+**Q. How big is the test suite?**
+55 tests / 227 assertions across `tests/Unit/` and `tests/Feature/` — see the table in
+[`../01-overview/architecture.md`](../01-overview/architecture.md#testing).
+
 **Q. Why does `just lint` fail when I changed nothing?**
-Pre-existing Pint style debt (13 files). See
+Pre-existing Pint style debt (8 files). See
 [../06-troubleshooting/common-issues.md](../06-troubleshooting/common-issues.md).
 
 **Q. Can I edit `_lighthouse_ide_helper.php` / `schema-directives.graphql` / `programmatic-types.graphql`?**

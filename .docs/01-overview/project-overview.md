@@ -40,7 +40,8 @@ deliverables, as shipped:
   `sales` fails with `no such table: sales` — see
   [`../06-troubleshooting/common-issues.md`](../06-troubleshooting/common-issues.md).
   (The PHPUnit suite is the exception: it runs on sqlite `:memory:` and scaffolds
-  test-only copies of `sales`/`users` in `tests/TestCase.php`, so `just test` is green.)
+  test-only copies of `sales`/`users` in `tests/TestCase.php`, so `just test` is green —
+  55 tests / 227 assertions, see [`architecture.md`](architecture.md#testing).)
 - To exercise the endpoints with data, import `biztory.sql` into a MySQL server and point
   `.env` at it (that is `.env.example`'s default shape). Do NOT import the dump into sqlite.
 

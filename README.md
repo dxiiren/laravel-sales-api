@@ -89,17 +89,33 @@ one user row (`id` 506) the GraphQL test filters on. This is test infrastructure
 app change — migrations and the app schema are untouched, and the running app's
 MySQL-required behavior is unchanged.
 
-Suites:
+`phpunit.xml` also sets `LIGHTHOUSE_SCHEMA_CACHE_ENABLE=false`, because
+`config/lighthouse.php` caches the compiled schema to `bootstrap/cache/lighthouse-schema.php`
+for every `APP_ENV` but `local` — without it the suite would assert against a stale
+schema and silently ignore edits to `graphql/*.graphql`.
 
-- `tests/Unit/` — the four original endpoint + GraphQL tests (store sale, factory store,
-  daily-sale count, GraphQL `DailyTotalSales`), all passing.
-- `tests/Feature/` — `POST /api/sales` happy path (200 + row persisted),
-  `POST /api/daily-sale` counting seeded sales, and regression tests for two fixed
-  filter bugs: leaving `payment_status`/`payee_id` out of the body used to 500 with
-  `Undefined array key "payment_status"`, and the old truthy check silently dropped a
-  legitimate `payment_status=0` (unpaid) filter. `CountDailySalesController` now uses
-  the same `isset()` pattern as its GraphQL twin — an omitted or empty key means
-  "no filter", while `0` filters for unpaid sales.
+**55 tests / 227 assertions**, all green:
+
+| Suite | Test | Covers |
+| --- | --- | --- |
+| Unit | `CountDailySalesControllerTest` | Exact REST totals for each filter combination over a seeded ledger |
+| Unit | `GraphQLDailyTest` | Exact GraphQL totals via the relative `/graphql` route |
+| Unit | `FactoryStoreSalesTest` | `GET /api/store-sale` |
+| Unit | `StoreSaleControllerTest` | `POST /api/sales` persists the payload |
+| Unit | `LogInvoiceCreatedTest` | The listener writes to the `invoice` log channel; it is registered for the event |
+| Feature | `RestGraphqlParityTest` | REST ⇄ GraphQL twin parity across every filter shape |
+| Feature | `SaleSoftDeleteTest` | Soft-deleted sales leave both totals; `restore()` / `forceDelete()` |
+| Feature | `InvoiceCreatedEventTest` | `InvoiceCreated` dispatch, the `invoice` broadcast channel, nothing dispatched on 422 |
+| Feature | `DailySaleValidationTest` | The bare `{"errors": …}` 422 contract and the GraphQL `@rules` twin |
+| Feature | `StoreSaleValidationTest` | Every `StoreSaleRequest` rule rejects and persists nothing |
+| Feature | `CountDailySalesTest`, `StoreSaleTest` | Original happy paths + the fixed filter regressions |
+
+The filter regressions worth knowing: leaving `payment_status`/`payee_id` out of the
+body used to 500 with `Undefined array key "payment_status"`; the old truthy check
+silently dropped a legitimate `payment_status=0` (unpaid) filter; and the GraphQL twin
+rejected the null/empty `payee_id` REST accepts as "no filter". Both twins now use the
+identical `isset($x) && $x !== ''` guard, and `RestGraphqlParityTest` fails if they
+drift apart again.
 
 ## API examples
 
@@ -177,10 +193,10 @@ error envelope (`errors[]` + `"data": null`), not an HTTP 500:
 
 Valid request body — the two filter keys are nullable and may be sent as `null`, sent
 empty, or omitted entirely; `payment_status: 0` is a real filter (unpaid sales only).
-(Omitting the keys used to 500 with `Undefined array key "payment_status"`, and the old
-truthy check dropped `payment_status=0`; the controller now uses the `isset()` pattern of
-its GraphQL twin, covered by regression tests in
-`tests/Feature/CountDailySalesTest.php`.)
+The GraphQL twin now accepts exactly the same three "no filter" spellings (its
+`payee_id` `@rules` are `["nullable","exists:users,id"]`), and
+`tests/Feature/RestGraphqlParityTest.php` asserts both endpoints return the identical
+money string for every filter shape.
 
 ```json
 {

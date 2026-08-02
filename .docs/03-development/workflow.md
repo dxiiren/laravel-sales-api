@@ -31,7 +31,7 @@
 | --- | --- | --- |
 | Endpoints | Single-action controllers (`__invoke`) | `StoreSaleController`, `CountDailySalesController` |
 | Write validation | FormRequest classes | `StoreSaleRequest`, `CountDailySalesRequest` |
-| GraphQL validation | `@rules` directives in the schema | `graphql/sale.graphql` (`after_or_equal:start_date`, `exists:users,id`) |
+| GraphQL validation | `@rules` directives in the schema | `graphql/sale.graphql` (`after_or_equal:start_date`, `nullable` + `exists:users,id`) |
 | Domain events | Declarative model dispatch, not controller dispatch | `Sale::$dispatchesEvents['created'] => InvoiceCreated` |
 | Audit logging | Dedicated log channel | `Log::channel('invoice')` → `storage/logs/invoice.log` |
 | Aggregates | Query `sum()`, not stored totals | `CountDailySalesController::calculateTotalSale` |
@@ -43,9 +43,15 @@
 - **The REST/GraphQL twins must stay in sync** — `CountDailySalesController` and
   `app/GraphQL/Mutations/DailyTotalSales.php` intentionally mirror each other. Change the
   filter/aggregation logic in both or the endpoints diverge (`/pre-pr-review` checks this).
-  They are reconciled today — both use the `isset()` pattern (the REST twin's old
-  truthy check that dropped a legitimate `payment_status=0` filter is fixed and
-  regression-tested in `tests/Feature/CountDailySalesTest.php`) — keep them that way.
+  They are reconciled today — both use the identical `isset($x) && $x !== ''` guard — and
+  `tests/Feature/RestGraphqlParityTest.php` now fails loudly if they drift again. History:
+  the REST twin's old truthy check dropped a legitimate `payment_status=0`, and the
+  GraphQL twin rejected the null/empty `payee_id` REST accepted as "no filter".
+- **A GraphQL schema edit is invisible to a cached schema** — `config/lighthouse.php`
+  writes `bootstrap/cache/lighthouse-schema.php` for every `APP_ENV` but `local`. The
+  suite pins `LIGHTHOUSE_SCHEMA_CACHE_ENABLE=false` in `phpunit.xml` for exactly this
+  reason; if you ever run the app under a non-local `APP_ENV`, clear that file after
+  touching `graphql/*.graphql`.
 - **Creating sales outside Eloquent skips the event chain** — `DB::insert()` or bulk
   `insert()` never fires `InvoiceCreated`, so no broadcast and no `invoice.log` line.
   Go through `Sale::create()` / instances.

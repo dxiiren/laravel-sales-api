@@ -56,17 +56,31 @@ by hand: set `DB_CONNECTION=sqlite` and comment out the `DB_HOST` / `DB_PORT` /
 
 ## `just lint` fails with style issues you didn't write
 
-**Symptom.** Hit for real on the verify run: Pint `--test` exits 1 — 13 of 63 files
-flagged (`app/Events/InvoiceCreated.php`, both controllers, the GraphQL mutation,
-`routes/api.php`, the tests, `config/lighthouse.php`, even `_lighthouse_ide_helper.php`;
-rules like `single_quote`, `concat_space`, `trailing_comma_in_multiline`,
-`no_unused_imports`).
+**Symptom.** Pint `--test` exits 1 — 8 of 72 files flagged
+(`app/Events/InvoiceCreated.php`, `StoreSaleController`, `CountDailySalesRequest`,
+`app/Listeners/LogInvoiceCreated.php`, `app/Models/Sale.php`, `routes/api.php`,
+`config/lighthouse.php`, and `_lighthouse_ide_helper.php`; rules like `single_quote`,
+`concat_space`, `trailing_comma_in_multiline`, `no_unused_imports`).
 **Cause.** Pre-existing style debt — the app source predates Pint being wired into the
 workflow. Not caused by your change.
 **Fix.** Scope your check to the files you touched
 (`php vendor\bin\pint --test path\to\file.php`), or clean the repo once with
 `just lint-fix` in a dedicated `style:` commit. If you do sweep: `_lighthouse_ide_helper.php`
 is a **generated** Lighthouse artifact — leave it out of any hand cleanup.
+
+## A `graphql/*.graphql` edit has no effect (stale Lighthouse schema cache)
+
+**Symptom.** Hit for real while fixing the `payee_id` `@rules`: the schema file changed,
+the app (or the test suite) kept serving the old directives — a `nullable` added to
+`@rules(apply: [...])` was simply ignored.
+**Cause.** `config/lighthouse.php` sets
+`'schema_cache.enable' => env('LIGHTHOUSE_SCHEMA_CACHE_ENABLE', env('APP_ENV') !== 'local')`
+and writes `bootstrap/cache/lighthouse-schema.php` (git-ignored). Anything running under
+a non-`local` `APP_ENV` — including PHPUnit, where `phpunit.xml` sets `APP_ENV=testing` —
+resolves the schema from that file, not from `graphql/`.
+**Fix.** The suite now pins `LIGHTHOUSE_SCHEMA_CACHE_ENABLE=false` in `phpunit.xml`, so
+tests always build the schema fresh — leave that in. Outside tests, delete
+`bootstrap/cache/lighthouse-schema.php` after a schema edit, or keep `APP_ENV=local`.
 
 ## GraphQL mutation errors with "Trailing data" from `DateScalar.php`
 

@@ -25,7 +25,7 @@ and fires a queued + broadcast `InvoiceCreated` event on every sale creation tha
 | Events | Laravel events + queue + broadcast | `InvoiceCreated` (ShouldQueue + ShouldBroadcast on channel `invoice`) → `LogInvoiceCreated` → `storage/logs/invoice.log` via the `invoice` log channel |
 | Database | MySQL schema/data in `biztory.sql`; sqlite for local dev | Repo migrations cover framework tables ONLY — `sales`/`users` exist only in the dump |
 | Frontend | Stock `welcome.blade.php` + Vite 5 | `npm run build` once, or `/` 500s with a missing-manifest error |
-| Tests | PHPUnit 10 via `just test` | Runs on sqlite `:memory:` (phpunit.xml); `tests/TestCase.php` scaffolds test-only `sales`/`users` tables per test — the full suite (Unit + Feature) is green without MySQL |
+| Tests | PHPUnit 10 via `just test` — **55 tests / 227 assertions**, all green | Runs on sqlite `:memory:` (phpunit.xml); `tests/TestCase.php` scaffolds test-only `sales`/`users` tables per test — the full suite (Unit + Feature) is green without MySQL. Covers REST/GraphQL twin parity, soft deletes, the `InvoiceCreated` event chain, and both FormRequest contracts |
 
 ### Project Structure
 
@@ -78,6 +78,16 @@ laravel-sales-api/
   seeding user id 506 for the GraphQL test's `exists:users,id` rule. That scaffolding is
   test infrastructure, NOT an app/schema change — keep it in `tests/`, never promote it to
   a migration.
+- `phpunit.xml` also sets `LIGHTHOUSE_SCHEMA_CACHE_ENABLE=false`. `config/lighthouse.php`
+  enables the schema cache for every `APP_ENV` except `local`, so under `APP_ENV=testing`
+  the suite would otherwise read a stale `bootstrap/cache/lighthouse-schema.php` and
+  silently ignore edits to `graphql/*.graphql` (directives included). Do NOT remove it —
+  a green suite would stop meaning anything about the current schema.
+- **REST/GraphQL twin parity is enforced by tests**, not by convention alone:
+  `tests/Feature/RestGraphqlParityTest.php` drives `POST /api/daily-sale` and the
+  `DailyTotalSales` mutation with identical filters and `assertSame`s the money strings.
+  Change `CountDailySalesController::buildQuery` and
+  `app/GraphQL/Mutations/DailyTotalSales::buildQuery` together, or that test fails.
 - `_lighthouse_ide_helper.php`, `programmatic-types.graphql`, and `schema-directives.graphql`
   are Lighthouse-generated IDE helpers — leave them untouched.
 - `public/vendor/graphiql/` holds **pinned** GraphiQL UMD assets (graphiql 2.4.7, react

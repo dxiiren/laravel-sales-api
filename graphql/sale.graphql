@@ -3,7 +3,7 @@ type Mutation{
         start_date: Date!,
         end_date: Date! @rules(apply:["after_or_equal:start_date"]),
         payment_status: Int,
-        payee_id: ID @rules(apply:["exists:users,id"]),
+        payee_id: ID @rules(apply:["nullable","exists:users,id"]),
     ): TotalSales
 }
 

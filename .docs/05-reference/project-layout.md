@@ -44,8 +44,9 @@ laravel-sales-api/
 │   └── database.sqlite                   # local db (git-ignored, created by bootstrap)
 ├── tests/
 │   ├── TestCase.php                      # test-only sales/users schema scaffolding (sqlite :memory:; mirrors biztory.sql)
-│   ├── Unit/                             # 4 HTTP-kernel tests: both controllers, factory route, GraphQL
-│   └── Feature/                          # store-sale happy path, seeded daily-sale count, omitted-keys regression
+│   ├── Concerns/QueriesDailyTotals.php   # shared REST + GraphQL daily-total call helpers
+│   ├── Unit/                             # controllers, factory route, GraphQL totals, the invoice-log listener
+│   └── Feature/                          # twin parity, soft deletes, InvoiceCreated, both validation contracts, happy paths
 ├── biztory.sql                           # MySQL dump: the REAL sales/users schema + sample data (do not import into sqlite)
 ├── question.md                           # the original assignment brief this app implements
 ├── _lighthouse_ide_helper.php            # generated Lighthouse IDE helper — do not edit
@@ -68,7 +69,7 @@ laravel-sales-api/
 
 | Change | Touch |
 | --- | --- |
-| New filter on daily totals | `CountDailySalesController::buildQuery` + `CountDailySalesRequest::rules()` **and** `app/GraphQL/Mutations/DailyTotalSales.php` + `graphql/sale.graphql` (the twins stay in sync) |
+| New filter on daily totals | `CountDailySalesController::buildQuery` + `CountDailySalesRequest::rules()` **and** `app/GraphQL/Mutations/DailyTotalSales.php` + `graphql/sale.graphql` (the twins stay in sync — add a scenario to `tests/Feature/RestGraphqlParityTest.php`) |
 | New field on sales | new migration + `biztory.sql` drift decision + `Sale::$fillable` + `StoreSaleRequest::rules()` + `SaleFactory` |
 | New invoice-lifecycle side effect | new listener + register in `EventServiceProvider` (the event already fires on every Eloquent create) |
 | New REST endpoint | `routes/api.php` + a single-action controller + a FormRequest |

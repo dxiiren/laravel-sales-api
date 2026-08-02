@@ -17,8 +17,9 @@ Two thin single-action controllers and one GraphQL resolver over one Eloquent mo
 `Sale::$dispatchesEvents` fires `InvoiceCreated` on every Eloquent create (queue +
 broadcast + log listener). The daily-total aggregation is deliberately implemented twice —
 `CountDailySalesController` and the `DailyTotalSales` mutation are twins that must change
-together. The real schema (`sales`, `users`) lives in the `biztory.sql` MySQL dump; repo
-migrations cover framework tables only.
+together, and `tests/Feature/RestGraphqlParityTest.php` fails if they drift. The real
+schema (`sales`, `users`) lives in the `biztory.sql` MySQL dump; repo migrations cover
+framework tables only. Ends with the 55-test suite table.
 
 ## [02-setup/getting-started.md](02-setup/getting-started.md)
 
@@ -67,14 +68,16 @@ make which change" table.
 Real symptom → cause → fix entries from the verify run: `composer install` refusing PHP
 8.4 (nette pins → use the 8.3 install), `no such table: sales` everywhere data is touched
 (schema lives in the dump; the test suite scaffolds its own copies), the mysql
-"could not find driver" from a hand-copied `.env`, Pint failing on 13 files of
-pre-existing debt, GraphQL's strict `Y-m-d` Date scalar, the Vite manifest 500, and
+"could not find driver" from a hand-copied `.env`, Pint failing on 8 files of
+pre-existing debt, a `graphql/*.graphql` edit ignored because of the cached Lighthouse
+schema, GraphQL's strict `Y-m-d` Date scalar, the Vite manifest 500, and
 port-8111/stop behavior (two `php.exe` per serve).
 
 ## [07-faq/faq.md](07-faq/faq.md)
 
 Quick answers: port 8111 (override with `$env:PORT`), no MySQL needed to boot, don't
 import the dump into sqlite, `just fresh` seeds nothing, where the invoice log goes, the
-queued/broadcast event runs inline locally, the REST/GraphQL twin rule (and the fixed
-`payment_status=0` quirk), strict GraphQL dates, generated files to leave alone, and
-"is this deployed?" (no).
+queued/broadcast event runs inline locally, the REST/GraphQL twin rule (and the two
+fixed filter quirks), soft-deleted sales leaving the totals, the stale Lighthouse schema
+cache, strict GraphQL dates, generated files to leave alone, and "is this deployed?"
+(no).
