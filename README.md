@@ -5,6 +5,24 @@ sales (with soft deletes), totals daily sales over a date range through both a R
 and a Lighthouse GraphQL mutation, and fires a queued + broadcast `InvoiceCreated` event on
 every sale creation that is logged to `storage/logs/invoice.log`.
 
+> [!IMPORTANT]
+> **Data requires MySQL.** The repo's migrations create framework tables only — the app's
+> `sales`/`users` tables ship **exclusively** in the MySQL dump [`biztory.sql`](biztory.sql).
+> On the default sqlite setup from the quick start below, the server boots, the welcome page
+> and the [GraphiQL IDE](#api-examples) load, and request validation returns proper 422s —
+> but every endpoint that touches data 500s with `no such table: sales`, and the four unit
+> tests fail the same way (that is the documented baseline, not a regression). To exercise
+> the data endpoints, import the dump into a MySQL server:
+>
+> ```powershell
+> mysql -u root -p < biztory.sql   # the dump CREATEs and fills the `biztory` database itself
+> ```
+>
+> then in `.env` restore `DB_CONNECTION=mysql` and the `DB_HOST` / `DB_PORT` /
+> `DB_DATABASE=biztory` / `DB_USERNAME` / `DB_PASSWORD` lines (`.env.example`'s original
+> defaults), enable `extension=pdo_mysql` in `%LOCALAPPDATA%\Programs\php-8.3\php.ini`
+> (shipped commented out in the pinned PHP), and restart with `just stop` + `just start`.
+
 > **New developer? Start with [`.docs/tldr.md`](.docs/tldr.md)** — every doc summarised on one
 > page. The full guide lives in [`.docs/`](.docs/README.md).
 
@@ -55,6 +73,130 @@ Run `just` with no arguments to list every recipe. The ones you'll use daily:
 | `just lint-fix` | Auto-fix code style with Laravel Pint |
 | `just claudex` | Launch Claude Code (Sonnet, all permissions) |
 
+## API examples
+
+Everything below runs against `just start` (`http://127.0.0.1:8111`). The requests and the
+sqlite responses were captured live from this repo; the MySQL response shapes are read
+straight off the schema and resolvers ([`graphql/sale.graphql`](graphql/sale.graphql),
+[`app/GraphQL/Mutations/DailyTotalSales.php`](app/GraphQL/Mutations/DailyTotalSales.php),
+[`app/Http/Controllers/CountDailySalesController.php`](app/Http/Controllers/CountDailySalesController.php)).
+
+### GraphiQL IDE — `GET /graphiql`
+
+Works on the sqlite baseline (no data needed):
+
+![GraphiQL IDE served at /graphiql](docs/images/graphiql.png)
+
+The IDE's JS/CSS are pinned local copies committed under `public/vendor/graphiql/` — see
+[Troubleshooting](#graphiql-stuck-at-loading) for why.
+
+### GraphQL — `DailyTotalSales` mutation (`POST /graphql`)
+
+```graphql
+mutation {
+  DailyTotalSales(start_date: "2023-01-01", end_date: "2023-01-31") {
+    amount
+    payment_status
+    payee_id
+  }
+}
+```
+
+`start_date`/`end_date` are Lighthouse `Date` scalars — strict `Y-m-d`, no time part (a
+trailing time errors with "Trailing data"). Optional `payment_status: Int` and
+`payee_id: ID` narrow the aggregation and are echoed back in the payload.
+
+**With MySQL (dump imported)** — shape per the `TotalSales` type and the resolver's
+`RM`-formatted sum of `sales.total` over the range (soft-deleted rows excluded):
+
+```json
+{
+  "data": {
+    "DailyTotalSales": {
+      "amount": "RM 12,345.67",
+      "payment_status": null,
+      "payee_id": null
+    }
+  }
+}
+```
+
+**On the local sqlite `.env`** — captured live. Note it is **HTTP 200** with a GraphQL
+error envelope (`errors[]` + `"data": null`), not an HTTP 500:
+
+```json
+{
+  "errors": [
+    {
+      "message": "Internal server error",
+      "locations": [{ "line": 1, "column": 12 }],
+      "path": ["DailyTotalSales"],
+      "extensions": {
+        "debugMessage": "SQLSTATE[HY000]: General error: 1 no such table: sales (Connection: sqlite, SQL: select sum(\"total\") as aggregate from \"sales\" where \"created_at\" between 2023-01-01 00:00:00 and 2023-01-31 00:00:00 and \"sales\".\"deleted_at\" is null)",
+        "file": ".../vendor/laravel/framework/src/Illuminate/Database/Connection.php",
+        "line": 829,
+        "trace": ["<60+ frames elided>"]
+      }
+    }
+  ],
+  "data": { "DailyTotalSales": null }
+}
+```
+
+(`debugMessage` and the trace appear because the local `.env` has `APP_DEBUG=true`.)
+
+### REST — `POST /api/daily-sale`
+
+Valid request body — include the two nullable keys **explicitly**: the controller indexes
+straight into `payment_status`/`payee_id`, so omitting them 500s with
+`Undefined array key "payment_status"` before any query runs (captured live):
+
+```json
+{
+  "start_date": "2023-01-01",
+  "end_date": "2023-01-31",
+  "payment_status": null,
+  "payee_id": null
+}
+```
+
+**With MySQL** — shape per `CountDailySalesController`:
+
+```json
+{ "message": "Sale successfully counted", "total_sale": "RM 12,345.67" }
+```
+
+**On sqlite** the same request 500s with the `no such table: sales` `QueryException`.
+
+**Validation — works on sqlite** (it runs before the database is touched). Captured live
+with `end_date` before `start_date`:
+
+```jsonc
+// POST /api/daily-sale  {"start_date": "2023-01-31", "end_date": "2023-01-01"}
+// → HTTP 422
+{ "errors": { "end_date": ["The end date must be after or equal to the start date."] } }
+```
+
+That flat `errors`-only envelope is `CountDailySalesRequest`'s custom `failedValidation`
+response; the other endpoint, `POST /api/sales`, uses the stock Laravel 422 envelope
+(`message` + `errors`).
+
+### Invoice audit log — `storage/logs/invoice.log`
+
+Every successful sale creation (`POST /api/sales`, `GET /api/store-sale`) dispatches
+`InvoiceCreated` (queued + broadcast on channel `invoice`), whose `LogInvoiceCreated`
+listener appends one line via the single-file `invoice` log channel — format per the
+listener's `sprintf`:
+
+```
+[2023-01-15 03:04:05] local.INFO: date: 2023-01-15, ref: IV-00123, total: 1250.00
+```
+
+This path also needs MySQL: the event's queued broadcast does a `SerializesModels`
+round-trip even on the sync queue, re-loading the `Sale` from the `sales` table before the
+listener runs — verified locally, the dispatch dies on `no such table: sales` first, so
+nothing is ever logged on sqlite.
+
 ## Troubleshooting
 
 ### `composer install` fails: "nette/schema ... requires php 8.1 - 8.3"
@@ -78,6 +220,17 @@ endpoints you need a MySQL server with the dump imported and `.env` pointed at i
 directories aren't tracked). Run `just test --testsuite=Unit` instead. The four Unit tests
 then fail on the `sales` table gap above — that is the known local baseline, not a
 regression.
+
+### `/graphiql` stuck at "Loading..."
+
+The vendor view (mll-lab/laravel-graphiql v3.1.0) loads **unpinned**
+`unpkg.com/graphiql/graphiql.min.js|.css`; graphiql v4+ deleted those UMD bundles, so the
+CDN "latest" URLs now 404 and the page never finishes loading
+(`php artisan graphiql:download-assets` dies on the same 404). This repo commits
+era-correct pinned assets — graphiql 2.4.7 + react 17.0.2 + plugin-explorer 0.2.0 — under
+`public/vendor/graphiql/`, which the package serves in preference to the CDN, so the IDE
+works (even offline). If the page regresses to "Loading...", check those files still
+exist. A console 404 for `favicon.ico` is harmless — the upstream icon URL is gone too.
 
 ### `artisan migrate` fails: "could not find driver" (mysql)
 
@@ -103,6 +256,8 @@ Sales-Management-System/
 ├── routes/api.php                         # POST /api/sales, POST /api/daily-sale, GET /api/store-sale
 ├── database/                              # framework migrations, SaleFactory, database.sqlite (local)
 ├── biztory.sql                            # MySQL dump: real sales/users schema + sample data
+├── docs/images/                           # README screenshots (graphiql.png)
+├── public/vendor/graphiql/                # pinned GraphiQL UMD assets (CDN "latest" broke — see Troubleshooting)
 ├── tests/Unit/                            # PHPUnit endpoint + GraphQL tests
 ├── question.md                            # the original assignment brief this app implements
 ├── justfile / setup.ps1                   # dev recipes / one-time machine bootstrap

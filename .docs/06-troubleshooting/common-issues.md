@@ -80,6 +80,20 @@ scalar parses strict `Y-m-d` only; a trailing time component is rejected.
 **Fix.** `just bootstrap` (runs the build). Confirmed after build: `GET /` → 200 and
 `GET /graphiql` → 200.
 
+## `/graphiql` returns 200 but the page is stuck at "Loading..."
+
+**Symptom.** Hit for real: `GET /graphiql` → 200, but the browser shows only "Loading..."
+forever; the console logs 404s for `unpkg.com/graphiql/graphiql.min.js` and
+`graphiql.min.css`.
+**Cause.** The vendor view (mll-lab/laravel-graphiql v3.1.0) loads **unpinned**
+`unpkg.com/graphiql/...` UMD bundles. graphiql v4+ deleted those files, so the CDN
+"latest" URLs now 404 — `php artisan graphiql:download-assets` dies on the same 404.
+**Fix.** Already fixed in-repo: era-correct pinned assets (graphiql 2.4.7, react 17.0.2,
+plugin-explorer 0.2.0) are committed under `public/vendor/graphiql/`, and the package
+serves local copies in preference to the CDN — the IDE works even offline. If the page
+regresses, check those files still exist; do not delete or "update" them. A console 404
+for `favicon.ico` is harmless (the upstream icon URL is gone too).
+
 ## `PHP 8.3 not found at ...` / vendor missing
 
 **Symptom.** A recipe fails immediately with the `_require-php` guard message, or PHP

@@ -77,6 +77,10 @@ Sales-Management-System/
   against whatever database `.env` points at, not an in-memory one.
 - `_lighthouse_ide_helper.php`, `programmatic-types.graphql`, and `schema-directives.graphql`
   are Lighthouse-generated IDE helpers — leave them untouched.
+- `public/vendor/graphiql/` holds **pinned** GraphiQL UMD assets (graphiql 2.4.7, react
+  17.0.2, plugin-explorer 0.2.0) committed on purpose: the package's unpinned
+  `unpkg.com/graphiql/...` CDN URLs 404 since graphiql v4 dropped the UMD bundles, and
+  `graphiql:download-assets` dies on the same 404. Do NOT delete or "update" them.
 
 ## Project Skills
 
