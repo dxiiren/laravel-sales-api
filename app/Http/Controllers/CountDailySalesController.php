@@ -21,11 +21,14 @@ class CountDailySalesController extends Controller
     {
         $query = Sale::whereBetween('created_at', [$validatedData['start_date'], $validatedData['end_date']]);
 
-        if ($validatedData['payment_status']) {
+        // Null-coalesce: validated() only contains keys that were present in the
+        // request, so omitting a nullable filter used to raise
+        // "Undefined array key" (500). Omitted now behaves like empty: no filter.
+        if ($validatedData['payment_status'] ?? null) {
             $query->where('payment_status', $validatedData['payment_status']);
         }
 
-        if ($validatedData['payee_id']) {
+        if ($validatedData['payee_id'] ?? null) {
             $query->where('payee_id', $validatedData['payee_id']);
         }
 
