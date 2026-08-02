@@ -2,8 +2,10 @@
 
 > **TL;DR** Every entry below was hit for real while standing this repo up. The big one:
 > the app's `sales`/`users` tables exist only in the `biztory.sql` MySQL dump, so on the
-> local sqlite database every data endpoint and all four tests fail with
-> `no such table: sales` — expected, not a regression. Each entry: symptom → cause → fix.
+> local sqlite database every data endpoint fails with `no such table: sales` — expected,
+> not a regression. (The PHPUnit suite is exempt: it runs on sqlite `:memory:` and
+> scaffolds test-only copies of those tables in `tests/TestCase.php`.) Each entry:
+> symptom → cause → fix.
 
 ## `composer install` fails: "nette/schema ... requires php 8.1 - 8.3"
 
@@ -21,7 +23,8 @@ is prohibited).
 `GET /api/store-sale` → 500; `POST /api/daily-sale` with a valid payload → 500
 `SQLSTATE[HY000]: General error: 1 no such table: sales (Connection: sqlite, ...)`;
 the `DailyTotalSales` GraphQL mutation → HTTP 200 but an `errors[]` entry with the same
-message; all four `tests/Unit/*` tests fail asserting `500 is identical to 200`.
+message. (Historically the four `tests/Unit/*` tests failed the same way — they now pass
+via the test-only schema scaffolding in `tests/TestCase.php`.)
 **Cause.** The repo's migrations create framework tables only (password resets, failed
 jobs, personal access tokens, jobs). The application schema (`sales`, `users`) lives
 solely in the `biztory.sql` MySQL dump. The local `.env` is sqlite.
@@ -31,13 +34,15 @@ exercise data endpoints for real: install a MySQL server, import `biztory.sql`, 
 `.env` at it (`.env.example`'s default shape). Do NOT import the dump into sqlite, edit
 migrations, or change `.env.example`.
 
-## `just test` aborts: `Test directory ".../tests/Feature" not found`
+## `just test` fails with `no such table: sales` (or aborts on `tests/Feature`)
 
-**Symptom.** Bare `just test` exits 1 before running anything.
-**Cause.** `phpunit.xml` declares a Feature suite but `tests/Feature/` doesn't exist in
-git (empty directories aren't tracked).
-**Fix.** `just test --testsuite=Unit`. The four Unit tests then fail on the `sales` table
-gap above — known baseline. Any OTHER failure is real.
+**Symptom.** Test failures citing `no such table: sales`, or (older checkouts) bare
+`just test` aborting with `Test directory ".../tests/Feature" not found`.
+**Cause.** You are on a checkout that predates the test scaffolding. Current `main` pins
+the suite to sqlite `:memory:` in `phpunit.xml`, creates test-only `sales`/`users`
+tables per test in `tests/TestCase.php`, and ships a `tests/Feature/` suite.
+**Fix.** Update to `main`; bare `just test` then runs the full suite green with no
+MySQL. Any failure on current `main` is real.
 
 ## `artisan migrate` fails: "could not find driver" (mysql)
 

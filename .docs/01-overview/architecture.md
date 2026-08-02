@@ -38,10 +38,12 @@ POST /api/daily-sale                         POST /graphql (mutation DailyTotalS
 
 The two implementations intentionally mirror each other. When changing filter or
 aggregation logic, change BOTH (the `pre-pr-review` skill checks this). Note the twins
-currently differ subtly: the REST controller uses a truthy check
-(`if ($validatedData['payment_status'])`) which drops a legitimate `payment_status=0`
-filter, while the GraphQL resolver uses `isset()`. Treat the GraphQL behavior as the
-correct one if you ever reconcile them.
+currently differ subtly: the REST controller uses a null-coalesced truthy check
+(`if ($validatedData['payment_status'] ?? null)` — the coalesce fixed the old
+omitted-key `Undefined array key` 500, regression-tested in
+`tests/Feature/CountDailySalesTest.php`) which still drops a legitimate
+`payment_status=0` filter, while the GraphQL resolver uses `isset()`. Treat the GraphQL
+behavior as the correct one if you ever reconcile them.
 
 ## GraphQL layer
 
@@ -69,10 +71,15 @@ correct one if you ever reconcile them.
 
 ## Testing
 
-Four PHPUnit 10 tests in `tests/Unit/` exercise the two controllers, the factory route,
-and the GraphQL mutation via HTTP kernel calls. `phpunit.xml` keeps the DB overrides
-commented out, so tests hit the `.env` database — they pass only against a MySQL with the
-biztory schema. See [`../06-troubleshooting/common-issues.md`](../06-troubleshooting/common-issues.md).
+PHPUnit 10, two suites. `tests/Unit/` holds the four original tests exercising the two
+controllers, the factory route, and the GraphQL mutation via HTTP kernel calls;
+`tests/Feature/` adds the store-sale happy path, a seeded daily-sale count, and the
+omitted-nullable-keys regression test. `phpunit.xml` pins the suite to sqlite
+`:memory:`, and `tests/TestCase.php` scaffolds test-only copies of `sales`/`users` per
+test (columns cross-checked against `biztory.sql`, user id 506 seeded for the GraphQL
+`exists:users,id` rule) — so `just test` is green with no MySQL, while the running app
+still needs the dump for data. The scaffolding is test infrastructure only; never
+promote it to a migration.
 
 ## Related docs
 

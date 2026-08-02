@@ -42,7 +42,10 @@ laravel-sales-api/
 │   ├── factories/SaleFactory.php         # fake invoice rows (also behind GET /api/store-sale)
 │   ├── seeders/DatabaseSeeder.php        # stock, seeds nothing
 │   └── database.sqlite                   # local db (git-ignored, created by bootstrap)
-├── tests/Unit/                           # 4 HTTP-kernel tests: both controllers, factory route, GraphQL
+├── tests/
+│   ├── TestCase.php                      # test-only sales/users schema scaffolding (sqlite :memory:; mirrors biztory.sql)
+│   ├── Unit/                             # 4 HTTP-kernel tests: both controllers, factory route, GraphQL
+│   └── Feature/                          # store-sale happy path, seeded daily-sale count, omitted-keys regression
 ├── biztory.sql                           # MySQL dump: the REAL sales/users schema + sample data (do not import into sqlite)
 ├── question.md                           # the original assignment brief this app implements
 ├── _lighthouse_ide_helper.php            # generated Lighthouse IDE helper — do not edit

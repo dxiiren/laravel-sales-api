@@ -2,7 +2,8 @@
 
 > **TL;DR** Everything routine is a `just` recipe — run `just` to list them. PHP and Composer
 > are resolved by absolute path (`%LOCALAPPDATA%\Programs\php-8.3`), so recipes work even in
-> shells opened before `setup.ps1` updated PATH. Always pass `--testsuite=Unit` to `just test`.
+> shells opened before `setup.ps1` updated PATH. `just test` runs the full suite, green
+> with no MySQL.
 
 ## Setup
 
@@ -32,7 +33,7 @@ Port override: `$env:PORT = '8200'; just start` (defaults to 8111).
 
 | Command | What it does |
 | --- | --- |
-| `just test --testsuite=Unit` | PHPUnit. Bare `just test` aborts on the missing `tests/Feature` directory — always pass the suite. Filters pass through too: `just test --testsuite=Unit --filter=GraphQLDailyTest`. |
+| `just test` | Full PHPUnit suite (Unit + Feature) on sqlite `:memory:`; app tables are scaffolded per-test by `tests/TestCase.php`, so it's green without MySQL. Filters pass through: `just test --filter=GraphQLDailyTest`. |
 | `just lint` | Laravel Pint style check, read-only (`pint --test`). |
 | `just lint-fix` | Laravel Pint auto-fix. |
 

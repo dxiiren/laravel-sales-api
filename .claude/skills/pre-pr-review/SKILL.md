@@ -71,7 +71,7 @@ the same thing; don't invent a rule the codebase doesn't follow).
 | 7   | **API responses**           | issue      | A new endpoint returning a Blade view or bare string instead of `response()->json()`; inconsistent JSON shape (`message` + payload is the house pattern); a write endpoint added as `GET`.                                                                          |
 | 8   | **Migrations**              | issue      | Editing an already-committed migration instead of adding a new one; missing `down()`; a new `sales`/`users` column added ONLY to `biztory.sql` (or only to a migration) — schema lives in the MySQL dump, so flag any drift and make the developer decide.           |
 | 9   | **Secrets / config**        | issue      | Hardcoded credentials/API keys; reading `env()` outside `config/`; committing `.env` or `database/database.sqlite`.                                                                                                                                                |
-| 10  | **Tests**                   | issue      | New/changed behavior with no test in `tests/Unit/`; a changed assertion watered down to pass; a new test assuming the `sales` table exists on sqlite (it lives in the MySQL dump — see lint-check).                                                                 |
+| 10  | **Tests**                   | issue      | New/changed behavior with no test in `tests/Unit/` or `tests/Feature/`; a changed assertion watered down to pass; a new test touching an app table the `tests/TestCase.php` scaffolding doesn't create (add it there, columns cross-checked against `biztory.sql`).                                                                 |
 | 11  | **No debug leftovers**      | issue      | `dd()` / `dump()` / `ray()` / `Log::debug` spam / commented-out dead blocks / `TODO` without a follow-up.                                                                                                                                                          |
 | 12  | **Eloquent design**         | suggestion | Query logic inline in a controller that belongs in a model scope; duplicated date-filter logic between the REST controller and the GraphQL resolver that could share a scope on `Sale`; a scope that silently changes global behavior.                              |
 | 13  | **Logging**                 | suggestion | New invoice-lifecycle logging not using the dedicated `invoice` channel (`config/logging.php` → `storage/logs/invoice.log`); log lines missing ref_num/total context the audit trail needs.                                                                         |
@@ -81,16 +81,12 @@ the same thing; don't invent a rule the codebase doesn't follow).
 
 ```powershell
 just lint
-just test --testsuite=Unit
+just test
 ```
 
-(Bare `just test` aborts on the missing `tests/Feature` directory — always pass
-`--testsuite=Unit` here.)
-
-Pint must be green. For the test run: a `no such table: sales` failure is the documented
-sqlite schema gap (tests need the MySQL `biztory.sql` schema — see
-`.docs/06-troubleshooting/common-issues.md`), not a blocking finding; any OTHER test
-failure is an **issue** (blocking) — paste the failing output line.
+Pint must be green. The full test suite (Unit + Feature) runs on sqlite `:memory:` with
+the test-only schema scaffolding in `tests/TestCase.php`, so it must be green too — any
+test failure is an **issue** (blocking); paste the failing output line.
 
 ## Step 5 — Finding labels & caps
 

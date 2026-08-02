@@ -65,7 +65,8 @@ this repo's php processes).
 | `GET /graphiql` IDE (200) | `POST /api/sales` with valid payload → 500 |
 | Request validation (bad payloads get proper validation errors) | `POST /api/daily-sale` with valid payload → 500 |
 | `just migrate`, `just fresh` | `DailyTotalSales` GraphQL mutation → `no such table: sales` |
-| `just lint` / `just lint-fix` | `just test --testsuite=Unit` (4 failures, same root cause) |
+| `just lint` / `just lint-fix` | — |
+| `just test` (full suite, green — runs on sqlite `:memory:` with the test-only `sales`/`users` scaffolding in `tests/TestCase.php`) | — |
 
 For full data locally you'd need a MySQL server with `biztory.sql` imported and `.env`
 pointed at it — optional and not part of the standard setup. Details in

@@ -25,7 +25,7 @@ and fires a queued + broadcast `InvoiceCreated` event on every sale creation tha
 | Events | Laravel events + queue + broadcast | `InvoiceCreated` (ShouldQueue + ShouldBroadcast on channel `invoice`) → `LogInvoiceCreated` → `storage/logs/invoice.log` via the `invoice` log channel |
 | Database | MySQL schema/data in `biztory.sql`; sqlite for local dev | Repo migrations cover framework tables ONLY — `sales`/`users` exist only in the dump |
 | Frontend | Stock `welcome.blade.php` + Vite 5 | `npm run build` once, or `/` 500s with a missing-manifest error |
-| Tests | PHPUnit 10 via `just test` | `tests/Unit/` hit the `.env` database and need the `sales` table |
+| Tests | PHPUnit 10 via `just test` | Runs on sqlite `:memory:` (phpunit.xml); `tests/TestCase.php` scaffolds test-only `sales`/`users` tables per test — the full suite (Unit + Feature) is green without MySQL |
 
 ### Project Structure
 
@@ -42,7 +42,7 @@ laravel-sales-api/
 ├── routes/api.php                         # POST /api/sales, POST /api/daily-sale, GET /api/store-sale
 ├── database/                              # framework migrations, SaleFactory, database.sqlite (local, git-ignored)
 ├── biztory.sql                            # MySQL dump: the real sales/users schema + sample data (do NOT import locally)
-├── tests/Unit/                            # PHPUnit endpoint + GraphQL tests
+├── tests/                                 # PHPUnit Unit + Feature suites; TestCase.php = test-only schema scaffolding
 ├── justfile / setup.ps1                   # dev recipes / one-time machine bootstrap
 └── .docs/                                 # developer documentation (start at tldr.md)
 ```
@@ -70,11 +70,14 @@ laravel-sales-api/
 - `just stop` kills only THIS repo's server processes (matched by repo path on the command
   line) — safe to run while other projects are serving.
 - The repo's migrations create framework tables only — the app's `sales`/`users` tables live
-  in the MySQL dump `biztory.sql`. On the local sqlite `.env`, `/api/*` endpoints and
-  `just test` fail with `no such table: sales`. That is expected — do NOT edit migrations,
-  point `.env` at MySQL by default, or import the dump into sqlite to "fix" it.
-- `phpunit.xml` has its `DB_CONNECTION`/`DB_DATABASE` overrides commented out — tests run
-  against whatever database `.env` points at, not an in-memory one.
+  in the MySQL dump `biztory.sql`. On the local sqlite `.env`, `/api/*` endpoints fail with
+  `no such table: sales`. That is expected — do NOT edit migrations, point `.env` at MySQL
+  by default, or import the dump into sqlite to "fix" it.
+- `phpunit.xml` pins tests to sqlite `:memory:`, and `tests/TestCase.php` creates test-only
+  minimal copies of `sales`/`users` (columns cross-checked against `biztory.sql`) per test,
+  seeding user id 506 for the GraphQL test's `exists:users,id` rule. That scaffolding is
+  test infrastructure, NOT an app/schema change — keep it in `tests/`, never promote it to
+  a migration.
 - `_lighthouse_ide_helper.php`, `programmatic-types.graphql`, and `schema-directives.graphql`
   are Lighthouse-generated IDE helpers — leave them untouched.
 - `public/vendor/graphiql/` holds **pinned** GraphiQL UMD assets (graphiql 2.4.7, react

@@ -10,9 +10,10 @@ every sale creation that is logged to `storage/logs/invoice.log`.
 > `sales`/`users` tables ship **exclusively** in the MySQL dump [`biztory.sql`](biztory.sql).
 > On the default sqlite setup from the quick start below, the server boots, the welcome page
 > and the [GraphiQL IDE](#api-examples) load, and request validation returns proper 422s —
-> but every endpoint that touches data 500s with `no such table: sales`, and the four unit
-> tests fail the same way (that is the documented baseline, not a regression). To exercise
-> the data endpoints, import the dump into a MySQL server:
+> but every endpoint that touches data 500s with `no such table: sales`. (The PHPUnit
+> suite is unaffected: it runs green on sqlite `:memory:` with test-only schema
+> scaffolding — see [Testing](#testing).) To exercise the data endpoints, import the dump
+> into a MySQL server:
 >
 > ```powershell
 > mysql -u root -p < biztory.sql   # the dump CREATEs and fills the `biztory` database itself
@@ -68,10 +69,35 @@ Run `just` with no arguments to list every recipe. The ones you'll use daily:
 | `just stop` | Stop only THIS repo's `php.exe` processes |
 | `just migrate` | Run pending migrations |
 | `just fresh` | Drop everything and re-migrate + seed (irreversible locally) |
-| `just test --testsuite=Unit` | Run the PHPUnit suite (bare `just test` aborts — see below) |
+| `just test` | Run the full PHPUnit suite (Unit + Feature) on sqlite `:memory:` — green without MySQL ([Testing](#testing)) |
 | `just lint` | Check code style with Laravel Pint (read-only) |
 | `just lint-fix` | Auto-fix code style with Laravel Pint |
 | `just claudex` | Launch Claude Code (Sonnet, all permissions) |
+
+## Testing
+
+`just test` runs the full PHPUnit suite (Unit + Feature) on **sqlite `:memory:`**
+(`phpunit.xml` pins `DB_CONNECTION`/`DB_DATABASE`), so it needs no MySQL and never
+touches your local database file.
+
+The app's `sales`/`users` tables ship only in `biztory.sql` — the repo's migrations are
+framework-only, on purpose — so the suite historically failed with
+`no such table: sales` (the old "4 baseline failures"). It is now green via **test-only
+schema scaffolding**: `tests/TestCase.php` creates minimal copies of the two tables per
+test (columns cross-checked against the dump's `CREATE TABLE` statements) and seeds the
+one user row (`id` 506) the GraphQL test filters on. This is test infrastructure, not an
+app change — migrations and the app schema are untouched, and the running app's
+MySQL-required behavior is unchanged.
+
+Suites:
+
+- `tests/Unit/` — the four original endpoint + GraphQL tests (store sale, factory store,
+  daily-sale count, GraphQL `DailyTotalSales`), all passing.
+- `tests/Feature/` — `POST /api/sales` happy path (200 + row persisted),
+  `POST /api/daily-sale` counting seeded sales, and a regression test for the
+  omitted-nullable-keys bug: leaving `payment_status`/`payee_id` out of the body used to
+  500 with `Undefined array key "payment_status"`; `CountDailySalesController` now
+  null-coalesces the optional filters, so an omitted key means "no filter".
 
 ## API examples
 
@@ -147,9 +173,10 @@ error envelope (`errors[]` + `"data": null`), not an HTTP 500:
 
 ### REST — `POST /api/daily-sale`
 
-Valid request body — include the two nullable keys **explicitly**: the controller indexes
-straight into `payment_status`/`payee_id`, so omitting them 500s with
-`Undefined array key "payment_status"` before any query runs (captured live):
+Valid request body — the two filter keys are nullable and may be sent as `null` or
+omitted entirely. (Omitting them used to 500 with
+`Undefined array key "payment_status"`; the controller now null-coalesces the optional
+filters, covered by a regression test in `tests/Feature/CountDailySalesTest.php`.)
 
 ```json
 {
@@ -214,12 +241,14 @@ welcome page, GraphiQL IDE, and request validation all still work. To exercise t
 endpoints you need a MySQL server with the dump imported and `.env` pointed at it. See
 [`.docs/06-troubleshooting/common-issues.md`](.docs/06-troubleshooting/common-issues.md).
 
-### `just test` aborts: `Test directory ".../tests/Feature" not found`
+### `just test` fails with `no such table: sales` (or the old `tests/Feature` abort)
 
-`phpunit.xml` declares a Feature suite but the folder doesn't exist in git (empty
-directories aren't tracked). Run `just test --testsuite=Unit` instead. The four Unit tests
-then fail on the `sales` table gap above — that is the known local baseline, not a
-regression.
+Fixed on current `main`: the suite runs on sqlite `:memory:` (`phpunit.xml`) and
+`tests/TestCase.php` scaffolds test-only `sales`/`users` tables per test, so bare
+`just test` is green with no MySQL ([Testing](#testing)). If you see either failure you
+are on a pre-scaffolding checkout — update to `main`. Note the **running app** on sqlite
+still 500s on data endpoints (previous section); only the test suite carries its own
+schema.
 
 ### `/graphiql` stuck at "Loading..."
 
@@ -258,7 +287,7 @@ laravel-sales-api/
 ├── biztory.sql                            # MySQL dump: real sales/users schema + sample data
 ├── docs/images/                           # README screenshots (graphiql.png)
 ├── public/vendor/graphiql/                # pinned GraphiQL UMD assets (CDN "latest" broke — see Troubleshooting)
-├── tests/Unit/                            # PHPUnit endpoint + GraphQL tests
+├── tests/                                 # PHPUnit Unit + Feature suites; TestCase.php holds the test-only schema scaffolding
 ├── question.md                            # the original assignment brief this app implements
 ├── justfile / setup.ps1                   # dev recipes / one-time machine bootstrap
 └── .docs/                                 # developer documentation (start at tldr.md)

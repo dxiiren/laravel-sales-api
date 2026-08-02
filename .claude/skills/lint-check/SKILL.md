@@ -42,20 +42,11 @@ just test          # php artisan test
 ```
 
 Pass = all tests green, exit 0. Filter a single test with
-`just test --filter=SomethingTest`. **Two caveats for this repo:**
-
-Bare `just test` aborts immediately with `Test directory ".../tests/Feature" not found` —
-`phpunit.xml` declares a Feature suite but the folder doesn't exist in git (empty dirs
-aren't tracked). Run the suite that exists instead: `just test --testsuite=Unit`.
-
-Second: `phpunit.xml` has the
-`DB_CONNECTION`/`DB_DATABASE` overrides COMMENTED OUT, so tests hit whatever database
-`.env` points at — and the four `tests/Unit/*` tests (`StoreSaleControllerTest`,
-`CountDailySalesControllerTest`, `FactoryStoreSalesTest`, `GraphQLDailyTest`) all
-write/read the `sales` table, which only exists in the MySQL `biztory.sql` dump, not
-in the repo's migrations. On the local sqlite `.env` they fail with
-`no such table: sales` — that is a known data-schema gap, not a code regression
-you introduced. See `.docs/06-troubleshooting/common-issues.md`.
+`just test --filter=SomethingTest`. The full suite (Unit + Feature) runs on sqlite
+`:memory:` (`phpunit.xml`) with test-only `sales`/`users` scaffolding created per test
+by `tests/TestCase.php` — green with no MySQL. Any failure is real; the old
+`no such table: sales` baseline and the `tests/Feature` abort only exist on
+pre-scaffolding checkouts. See `.docs/06-troubleshooting/common-issues.md`.
 
 ---
 

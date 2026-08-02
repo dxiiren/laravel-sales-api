@@ -15,8 +15,8 @@
 | Asset build | `npm run build` locally (run by `just bootstrap`) |
 | Auth | None on the sales endpoints (Sanctum is installed but only guards the stock `/api/user` route) |
 
-The local "gate" is `just lint` + `just test --testsuite=Unit`, run by hand before
-committing.
+The local "gate" is `just lint` + `just test` (full suite, sqlite `:memory:`), run by
+hand before committing.
 
 ## If you ever deploy this
 

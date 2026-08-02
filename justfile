@@ -82,10 +82,9 @@ fresh: _require-php
 
 # ─── Quality ─────────────────────────────────────────────
 
-# phpunit.xml declares a Feature suite but tests/Feature doesn't exist in git (empty dirs
-# aren't tracked), so a bare run aborts with "Test directory not found" — pass
-# --testsuite=Unit to run the tests that exist.
-# Run the test suite (use: just test --testsuite=Unit). Extra args pass through.
+# Runs on sqlite :memory: (phpunit.xml); the app's sales/users tables are created per-test
+# by the test-only scaffolding in tests/TestCase.php — no MySQL needed for a green suite.
+# Run the full PHPUnit suite (Unit + Feature). Extra args pass through.
 test *flags: _require-php
     & '{{php}}' artisan test {{flags}}
 

@@ -39,6 +39,8 @@ deliverables, as shipped:
 - On the local sqlite database, everything boots and validates, but any query touching
   `sales` fails with `no such table: sales` — see
   [`../06-troubleshooting/common-issues.md`](../06-troubleshooting/common-issues.md).
+  (The PHPUnit suite is the exception: it runs on sqlite `:memory:` and scaffolds
+  test-only copies of `sales`/`users` in `tests/TestCase.php`, so `just test` is green.)
 - To exercise the endpoints with data, import `biztory.sql` into a MySQL server and point
   `.env` at it (that is `.env.example`'s default shape). Do NOT import the dump into sqlite.
 

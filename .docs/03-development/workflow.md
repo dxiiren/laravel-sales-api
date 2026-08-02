@@ -1,7 +1,7 @@
 # Development workflow
 
 > **TL;DR** Branch off `main` → edit → `just serve` to watch request logs → `just lint` +
-> `just test --testsuite=Unit` before committing → Conventional Commits → PR via `gh`. All
+> `just test` before committing → Conventional Commits → PR via `gh`. All
 > routine commands are `just` recipes; Claude Code skills in `.claude/skills/` automate the
 > git parts. Change the REST controller and its GraphQL twin together.
 
@@ -17,10 +17,10 @@
    `biztory.sql`, not in migrations — if you add a column the MySQL dump and your migration
    drift apart; flag that in the PR rather than silently choosing one.
 4. **Quality gate** — `just lint` (Pint style check; `just lint-fix` to auto-fix) and
-   `just test --testsuite=Unit` (bare `just test` aborts on the missing `tests/Feature`
-   directory). On the local sqlite database the four Unit tests fail with
-   `no such table: sales` — the documented baseline, not your regression; any OTHER failure
-   is yours. No CI exists — this local gate is the only gate.
+   `just test` (full Unit + Feature suite, green on sqlite `:memory:` — the app tables the
+   tests need are scaffolded per-test by `tests/TestCase.php`, no MySQL required). Any
+   failure is yours. No CI exists — this local gate is the only gate. Keep the scaffolding
+   in `tests/` in sync with `biztory.sql` if you ever touch the dump's schema.
 5. **Commit** — Conventional Commits (`feat(sales): ...`). With Claude Code, `/commit`
    drives it. Never commit `.env`, `.mcp.json`, or `database/database.sqlite`.
 6. **PR** — `gh pr create` into `main` (or `/create-pr`). Optional `/pre-pr-review` first.
@@ -43,8 +43,9 @@
 - **The REST/GraphQL twins must stay in sync** — `CountDailySalesController` and
   `app/GraphQL/Mutations/DailyTotalSales.php` intentionally mirror each other. Change the
   filter/aggregation logic in both or the endpoints diverge (`/pre-pr-review` checks this).
-  They already differ subtly: the REST controller's truthy `if ($validatedData['payment_status'])`
-  drops a legitimate `payment_status=0` filter; the GraphQL resolver's `isset()` does not.
+  They already differ subtly: the REST controller's null-coalesced truthy check
+  (`$validatedData['payment_status'] ?? null`) still drops a legitimate
+  `payment_status=0` filter; the GraphQL resolver's `isset()` does not.
 - **Creating sales outside Eloquent skips the event chain** — `DB::insert()` or bulk
   `insert()` never fires `InvoiceCreated`, so no broadcast and no `invoice.log` line.
   Go through `Sale::create()` / instances.

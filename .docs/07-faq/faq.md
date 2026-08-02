@@ -1,8 +1,9 @@
 # FAQ
 
 > **TL;DR** Quick answers: port 8111, sqlite locally (no MySQL needed to boot), the
-> `sales` table only exists in `biztory.sql`, `just test` needs `--testsuite=Unit`,
-> GraphQL dates are strict `Y-m-d`, and no — this is not deployed anywhere.
+> `sales` table only exists in `biztory.sql` (tests scaffold their own copy), `just test`
+> runs the full suite green, GraphQL dates are strict `Y-m-d`, and no — this is not
+> deployed anywhere.
 
 ## Running
 
@@ -69,10 +70,11 @@ The `Date` scalar wants strict `Y-m-d` — `"2024-01-01"`, not `"2024-01-01 00:0
 
 ## Code
 
-**Q. Why does `just test` abort immediately?**
-`phpunit.xml` declares a `tests/Feature` suite that doesn't exist in git. Run
-`just test --testsuite=Unit`. The 4 Unit tests then fail on the `sales` gap — the known
-baseline.
+**Q. How can the tests pass without MySQL?**
+The suite runs on sqlite `:memory:` (`phpunit.xml`), and `tests/TestCase.php` creates
+minimal test-only copies of the `sales`/`users` tables per test, cross-checked against
+`biztory.sql`. That is test scaffolding, not app schema — migrations stay
+framework-only, and the running app still needs MySQL for data endpoints.
 
 **Q. Why does `just lint` fail when I changed nothing?**
 Pre-existing Pint style debt (13 files). See

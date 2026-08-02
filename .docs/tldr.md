@@ -31,7 +31,8 @@ table 500s on sqlite — expected.
 ## [03-development/workflow.md](03-development/workflow.md)
 
 Branch off `main`, `just serve` while editing (no restarts needed), new migrations only,
-gate with `just lint` + `just test --testsuite=Unit` (no CI — this is the only gate),
+gate with `just lint` + `just test` (full suite on sqlite `:memory:`; no CI — this is
+the only gate),
 Conventional Commits, PR via `gh`. House patterns: single-action controllers,
 FormRequests, model-event dispatch, the `invoice` log channel, REST/GraphQL parity.
 Watch for: the sqlite schema gap, Eloquent-bypassing writes skipping the event chain,
@@ -47,7 +48,8 @@ builds, a queue worker, and Pusher credentials for real broadcasts.
 ## [05-reference/commands.md](05-reference/commands.md)
 
 The `just` recipe table: `bootstrap`, `start`/`serve`/`stop` (project-scoped kill),
-`migrate`/`fresh`, `test --testsuite=Unit` (bare `test` aborts), `lint`/`lint-fix`,
+`migrate`/`fresh`, `test` (full suite, sqlite `:memory:`, green without MySQL),
+`lint`/`lint-fix`,
 `claudex/o/h` — plus occasional raw artisan commands (`route:list`, `tinker`,
 `lighthouse:validate-schema`). PHP/Composer resolve by absolute path so recipes work in
 stale shells.
@@ -64,7 +66,7 @@ make which change" table.
 
 Real symptom → cause → fix entries from the verify run: `composer install` refusing PHP
 8.4 (nette pins → use the 8.3 install), `no such table: sales` everywhere data is touched
-(schema lives in the dump), the `tests/Feature` abort (`--testsuite=Unit`), the mysql
+(schema lives in the dump; the test suite scaffolds its own copies), the mysql
 "could not find driver" from a hand-copied `.env`, Pint failing on 13 files of
 pre-existing debt, GraphQL's strict `Y-m-d` Date scalar, the Vite manifest 500, and
 port-8111/stop behavior (two `php.exe` per serve).
